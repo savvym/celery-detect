@@ -9,8 +9,14 @@ https://docs.djangoproject.com/en/5.0/howto/deployment/wsgi/
 
 import os
 
+from channels.routing import ProtocolTypeRouter
 from django.core.wsgi import get_wsgi_application
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'celery_detect.settings')
 
-application = get_wsgi_application()
+django_asgi_app = get_wsgi_application()
+
+application = ProtocolTypeRouter({
+    "http": django_asgi_app,
+    # Just HTTP for now. (We can add other protocols later.)
+})
