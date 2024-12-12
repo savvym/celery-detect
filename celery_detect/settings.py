@@ -25,13 +25,14 @@ SECRET_KEY = 'django-insecure-yq^3eoi4faas@y+nkd294iz^^itdaj!o5^h1z_^$ey997u1om&
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
 
 INSTALLED_APPS = [
     'daphne',
+    'chat',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -70,6 +71,12 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'celery_detect.wsgi.application'
 ASGI_APPLICATION = "celery_detect.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
