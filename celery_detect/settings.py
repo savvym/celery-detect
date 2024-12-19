@@ -46,6 +46,11 @@ INSTALLED_APPS = [
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/1'
 
+# Celery-Detect Config
+MAX_TASKS = 10,000
+MAX_WORKERS = 1,000
+
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
