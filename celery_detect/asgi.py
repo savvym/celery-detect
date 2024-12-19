@@ -19,7 +19,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'celery_detect.settings')
 
 django_asgi_app = get_asgi_application()
 
-from chat.routing import websocket_urlpatterns
+from ws.routing import websocket_urlpatterns
 
 application = ProtocolTypeRouter(
     {
