@@ -1,5 +1,5 @@
 import logging
-
+import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from ws.managers import events_manager, raw_events_manager
 
@@ -11,17 +11,23 @@ class BaseWebSocketConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
         await self.accept()
-        self.manager.subscribe(self)
+        await self.manager.subscribe(self)
         logger.info(f"Client {self.scope['client']} connected to {self.manager.name}")
 
     async def disconnect(self, close_code):
-        self.manager.unsubscribe(self)
+        await self.manager.unsubscribe(self)
         logger.info(f"Client {self.scope['client']} disconnected from {self.manager.name}")
 
     async def receive(self, text_data=None, bytes_data=None):
-        message = text_data or bytes_data
-        logger.warning(f"Client {self.scope['client']} sent message to {self.manager.name} manager: {message}")
-        # Handle the received message (optional) here
+        try:
+            message = text_data or bytes_data
+            logger.debug(f"Client {self.scope['client']} sent message: {message}")
+            # You can respond with a JSON message:
+            response = {"code": 0, "message": "ok"}
+            await self.send(text_data=json.dumps(response))
+        except Exception as e:
+            logger.error(f"Error processing received message from {self.scope['client']}: {e}")
+            await self.send(text_data=json.dumps({"code": -1, "message": "error"}))
 
 
 class EventsConsumer(BaseWebSocketConsumer):

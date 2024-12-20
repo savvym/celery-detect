@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.layers import get_channel_layer
 
@@ -11,17 +12,22 @@ class WebsocketManager:
     def __init__(self, name: str):
         self.name = name
         self.channel_layer = get_channel_layer()
-        self.active_connections = []
+        self.active_connections = {}  # 使用字典存储，key 为 channel_name，value 为 ClientInfo 实例
+        self.lock = asyncio.Lock()
 
     async def subscribe(self, websocket: AsyncWebsocketConsumer) -> None:
-        logger.info(f"Client {websocket.scope['client']!r} subscribed to {self.name!r} websocket manager")
-        self.active_connections.append(websocket)
-        await self.channel_layer.group_add(self.name, websocket.channel_name)
+        async with self.lock:
+            logger.info(f"Client {websocket.scope['client']} subscribed to {self.name} websocket manager")
+            client_info = await ClientInfo.from_scope(websocket.scope)
+            self.active_connections[websocket.channel_name] = client_info
+            await self.channel_layer.group_add(self.name, websocket.channel_name)
 
     async def unsubscribe(self, websocket: AsyncWebsocketConsumer) -> None:
-        logger.info(f"Client {websocket.scope['client']!r} unsubscribed from {self.name!r} websocket manager")
-        self.active_connections.remove(websocket)
-        await self.channel_layer.group_discard(self.name, websocket.channel_name)
+        async with self.lock:
+            logger.info(f"Client {websocket.scope['client']} unsubscribed from {self.name} websocket manager")
+            if websocket.channel_name in self.active_connections:
+                del self.active_connections[websocket.channel_name]
+            await self.channel_layer.group_discard(self.name, websocket.channel_name)
 
     async def broadcast(self, message: str) -> None:
         await self.channel_layer.group_send(
@@ -33,8 +39,7 @@ class WebsocketManager:
         )
 
     async def get_clients(self) -> list[ClientInfo]:
-        clients = [await ClientInfo.from_scope(client.scope) for client in self.active_connections]
-        return clients
+        return list(self.active_connections.values())
 
 
 class WebSocketConsumer(AsyncWebsocketConsumer):
