@@ -15,6 +15,6 @@ def get_celery_app():
         broker="redis://localhost:6379/0",
         backend="redis://localhost:6379/1"
     )
-    app.config_from_object('django.conf', namespace='CELERY')
+    app.config_from_object('django.conf:settings', namespace='CELERY')
     _celery_app_cache = app
     return app
