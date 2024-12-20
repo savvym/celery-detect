@@ -2,20 +2,19 @@ import asyncio
 import json
 import logging
 
-from events.subscriber import QueueSubscriber
 from events.exceptions import InconsistentStateStoreError, InvalidEventError
 from events.models import EventCategory, EventMessage, EventType
 from events.receiver import state
-from ws.managers import events_manager, raw_events_manager
-from workers.models import Worker
+from events.subscriber import QueueSubscriber
 from tasks.models import Task
+from workers.models import Worker
+from ws.managers import events_manager, raw_events_manager
 
 logger = logging.getLogger(__name__)
 
 
 class EventBroadcaster(QueueSubscriber[dict]):
     async def handle_event(self, event: dict) -> None:
-        """Handle event and broadcast raw or parsed event."""
         await asyncio.gather(
             broadcast_raw_event(event),
             broadcast_parsed_event(event),
@@ -23,7 +22,6 @@ class EventBroadcaster(QueueSubscriber[dict]):
 
 
 async def broadcast_raw_event(event: dict) -> None:
-    """Broadcast raw event to the 'raw_events' manager."""
     logger.debug(f"Broadcasting raw event of type {event.get('type', 'UNKNOWN')!r}")
     try:
         await raw_events_manager.broadcast(json.dumps(event))
@@ -32,7 +30,6 @@ async def broadcast_raw_event(event: dict) -> None:
 
 
 async def broadcast_parsed_event(event: dict) -> None:
-    """Parse the event and broadcast it to the 'events' manager."""
     try:
         message = parse_event(event)
     except InvalidEventError as e:
@@ -50,7 +47,6 @@ async def broadcast_parsed_event(event: dict) -> None:
 
 
 def parse_event(event: dict) -> EventMessage:
-    """Parse event and return corresponding event message."""
     event_type = event.get("type")
     if event_type is None:
         raise InvalidEventError(f"Received event without type: {event}")
@@ -66,7 +62,6 @@ def parse_event(event: dict) -> EventMessage:
 
 
 def parse_worker_event(event: dict, event_type: str) -> EventMessage | None:
-    """Parse worker event."""
     worker_hostname = event.get("hostname")
     if worker_hostname is None:
         raise InvalidEventError(f"Worker event {event_type!r} is missing hostname: {event}")
@@ -84,7 +79,6 @@ def parse_worker_event(event: dict, event_type: str) -> EventMessage | None:
 
 
 def parse_task_event(event: dict, event_type: str) -> EventMessage | None:
-    """Parse task event."""
     task_id = event.get("uuid")
     if task_id is None:
         raise InvalidEventError(f"Task event {event_type!r} is missing uuid: {event}")
