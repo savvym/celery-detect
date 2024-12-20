@@ -53,7 +53,7 @@ class CeleryEventReceiver(Thread):
             self.receiver.capture(limit=None, timeout=None, wakeup=True)
 
     def on_event(self, event: dict) -> None:
-        logger.debug(f"Received event: {event}")
+        logger.info(f"Received event: {event}")
         state.event(event)
         self.queue.put_nowait(event)
         if self._stop_signal.is_set():
