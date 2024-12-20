@@ -33,6 +33,10 @@ ALLOWED_HOSTS = ['*']
 INSTALLED_APPS = [
     'daphne',
     'ws',
+    'events',
+    'server_info',
+    'tasks',
+    'workers',
     'chat',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -139,3 +143,8 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+DebugBundleSettings = {
+    'LOG_FILE_PATH': "./logs"
+}

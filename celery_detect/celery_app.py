@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 _celery_app_cache: Celery | None = None
 
 
-def get_celery_app():
+async def get_celery_app():
     global _celery_app_cache
     if _celery_app_cache is not None:
         return _celery_app_cache
