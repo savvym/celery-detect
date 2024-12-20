@@ -1,6 +1,6 @@
+import asyncio
 import json
 import logging
-from asgiref.sync import sync_to_async
 
 from events.exceptions import InconsistentStateStoreError, InvalidEventError
 from events.models import EventCategory, EventMessage, EventType
@@ -8,26 +8,44 @@ from events.receiver import state
 from events.subscriber import QueueSubscriber
 from tasks.models import Task
 from workers.models import Worker
-from ws.managers import events_manager, raw_events_manager
+from channels.layers import get_channel_layer
 
 logger = logging.getLogger(__name__)
 
 
 class EventBroadcaster(QueueSubscriber[dict]):
+
     async def handle_event(self, event: dict) -> None:
-        await sync_to_async(broadcast_raw_event)(event)
-        await sync_to_async(broadcast_parsed_event)(event)
+        await asyncio.gather(
+            self.broadcast_raw_event(event),
+            self.broadcast_parsed_event(event),
+        )
+
+    async def broadcast_raw_event(self, event: dict) -> None:
+        # Implementation specific to your application
+        pass
+
+    async def broadcast_parsed_event(self, event: dict) -> None:
+        # Implementation specific to your application
+        pass
 
 
-def broadcast_raw_event(event: dict) -> None:
+async def broadcast_raw_event(event: dict) -> None:
     logger.debug(f"Broadcasting raw event of type {event.get('type', 'UNKNOWN')!r}")
     try:
-        sync_to_async(raw_events_manager.broadcast)(json.dumps(event))
+        channel_layer = get_channel_layer()
+        await channel_layer.group_send(
+            "raw_events",
+            {
+                "type": "broadcast_message",
+                "message": json.dumps(event),
+            }
+        )
     except Exception as e:
         logger.exception(f"Failed to broadcast raw event: {e}")
 
 
-def broadcast_parsed_event(event: dict) -> None:
+async def broadcast_parsed_event(event: dict) -> None:
     try:
         message = parse_event(event)
     except InvalidEventError as e:
@@ -39,7 +57,14 @@ def broadcast_parsed_event(event: dict) -> None:
     else:
         logger.debug(f"Broadcasting event {message.type.value!r}")
         try:
-            sync_to_async(events_manager.broadcast)(message.model_dump_json())
+            channel_layer = get_channel_layer()
+            await channel_layer.group_send(
+                "parsed_events",
+                {
+                    "type": "broadcast_message",
+                    "message": message.model_dump_json(),
+                }
+            )
         except Exception as e:
             logger.exception(f"Failed to broadcast event: {e}")
 

@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 from threading import Event, Thread
@@ -5,7 +6,7 @@ from threading import Event, Thread
 from celery import Celery
 from celery.events import EventReceiver
 from celery.events.state import State
-from asgiref.sync import sync_to_async, async_to_sync
+from channels.layers import get_channel_layer
 
 from celery_detect.settings import MAX_TASKS, MAX_WORKERS
 
@@ -17,21 +18,19 @@ state = State(
 )
 
 
-class CeleryEventReceiver:
-    """Class for consuming events from a Celery cluster."""
+class CeleryEventReceiver(Thread):
+    """Thread for consuming events from a Celery cluster."""
 
     def __init__(self, app: Celery):
+        super().__init__()
         self.app = app
         self._stop_signal = Event()
-        self.queue = async_to_sync(self._create_async_queue)()
+        self.queue_name = "celery_events"
+        self.channel_layer = get_channel_layer()
         self.receiver: EventReceiver | None = None
 
-    def start(self):
-        logger.info("Starting event consumer...")
-        self.thread = Thread(target=self.run)
-        self.thread.start()
-
     def run(self) -> None:
+        logger.info("Starting event consumer...")
         while not self._stop_signal.is_set():
             try:
                 self.consume_events()
@@ -49,16 +48,24 @@ class CeleryEventReceiver:
                 channel=connection,
                 app=self.app,
                 handlers={
-                    "*": async_to_sync(self.on_event),
+                    "*": self.on_event,
                 },
             )
             logger.info("Starting to consume events...")
             self.receiver.capture(limit=None, timeout=None, wakeup=True)
 
-    async def on_event(self, event: dict) -> None:
+    def on_event(self, event: dict) -> None:
         logger.debug(f"Received event: {event}")
-        state.event(event)
-        await self.queue.put(event)
+        try:
+            state.event(event)
+        except KeyError as e:
+            logger.warning(f"Failed to process event for unknown worker: '{e}'")
+            return  # or handle the unknown worker event in another way
+
+        asyncio.create_task(self.channel_layer.group_send(self.queue_name, {
+            "type": "celery_event",
+            "event": event,
+        }))
         if self._stop_signal.is_set():
             raise KeyboardInterrupt("Stop signal received")
 
@@ -67,16 +74,4 @@ class CeleryEventReceiver:
         if self.receiver is not None:
             self.receiver.should_stop = True
         self._stop_signal.set()
-        self.thread.join()
-
-    @sync_to_async
-    def _create_async_queue(self):
-        import queue
-        return queue.Queue()
-
-
-# 启动事件接收器
-def start_event_receiver(app: Celery):
-    receiver = CeleryEventReceiver(app)
-    receiver.start()
-    return receiver
+        self.join()
