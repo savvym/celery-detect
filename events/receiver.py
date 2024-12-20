@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import time
 from threading import Event, Thread
@@ -6,6 +5,7 @@ from threading import Event, Thread
 from celery import Celery
 from celery.events import EventReceiver
 from celery.events.state import State
+from asgiref.sync import sync_to_async, async_to_sync
 
 from celery_detect.settings import MAX_TASKS, MAX_WORKERS
 
@@ -17,18 +17,21 @@ state = State(
 )
 
 
-class CeleryEventReceiver(Thread):
-    """Thread for consuming events from a Celery cluster."""
+class CeleryEventReceiver:
+    """Class for consuming events from a Celery cluster."""
 
     def __init__(self, app: Celery):
-        super().__init__()
         self.app = app
         self._stop_signal = Event()
-        self.queue = asyncio.Queue()
+        self.queue = async_to_sync(self._create_async_queue)()
         self.receiver: EventReceiver | None = None
 
-    def run(self) -> None:
+    def start(self):
         logger.info("Starting event consumer...")
+        self.thread = Thread(target=self.run)
+        self.thread.start()
+
+    def run(self) -> None:
         while not self._stop_signal.is_set():
             try:
                 self.consume_events()
@@ -46,16 +49,16 @@ class CeleryEventReceiver(Thread):
                 channel=connection,
                 app=self.app,
                 handlers={
-                    "*": self.on_event,
+                    "*": async_to_sync(self.on_event),
                 },
             )
             logger.info("Starting to consume events...")
             self.receiver.capture(limit=None, timeout=None, wakeup=True)
 
-    def on_event(self, event: dict) -> None:
+    async def on_event(self, event: dict) -> None:
         logger.debug(f"Received event: {event}")
         state.event(event)
-        self.queue.put_nowait(event)
+        await self.queue.put(event)
         if self._stop_signal.is_set():
             raise KeyboardInterrupt("Stop signal received")
 
@@ -64,4 +67,16 @@ class CeleryEventReceiver(Thread):
         if self.receiver is not None:
             self.receiver.should_stop = True
         self._stop_signal.set()
-        self.join()
+        self.thread.join()
+
+    @sync_to_async
+    def _create_async_queue(self):
+        import queue
+        return queue.Queue()
+
+
+# 启动事件接收器
+def start_event_receiver(app: Celery):
+    receiver = CeleryEventReceiver(app)
+    receiver.start()
+    return receiver

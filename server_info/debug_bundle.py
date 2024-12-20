@@ -1,10 +1,10 @@
-import asyncio
 import logging
 import zipfile
 from io import BytesIO
 from typing import Any, NamedTuple
+from pathlib import Path
 
-from aiopath import AsyncPath
+from asgiref.sync import sync_to_async
 from pydantic_core import to_json
 
 from celery_detect import settings
@@ -17,26 +17,26 @@ from ws.models import ClientInfo, UserAgentInfo
 
 logger = logging.getLogger(__name__)
 
-
 Settings = settings.DebugBundleSettings
 
 
 def dump_model(file: zipfile.ZipFile, filename: str, model: Any) -> None:
     try:
         settings_json = to_json(model, indent=4)
+        file.writestr(filename, settings_json)
     except Exception as e:
         logger.exception(f"Failed to dump object {model!r} to file {filename!r}: {e}")
-    else:
-        file.writestr(filename, settings_json)
 
 
-async def dump_file(file: zipfile.ZipFile, filename: str, path: AsyncPath) -> None:
-    if not await path.is_file():
-        logger.info(f"Unable to find file at {path.name!r}, skipping...")
+@sync_to_async
+def dump_file(file: zipfile.ZipFile, filename: str, path: Path) -> None:
+    if not path.is_file():
+        logger.info(f"Unable to find file at {path!r}, skipping...")
         return
 
-    content = await path.read_text(encoding="utf-8")
-    file.writestr(filename, content)
+    with path.open('r', encoding='utf-8') as f:
+        content = f.read()
+        file.writestr(filename, content)
 
 
 class DebugBundleData(NamedTuple):
@@ -49,18 +49,17 @@ class DebugBundleData(NamedTuple):
     server_info: ServerInfo
 
 
-async def generate_bundle_file(data: DebugBundleData) -> BytesIO:
+def generate_bundle_file(data: DebugBundleData) -> BytesIO:
     buffer = BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as file:
-        async with asyncio.TaskGroup() as tg:
-            tg.create_task(dump_file(file, "config.py", AsyncPath(data.settings.config_path)))
-            tg.create_task(dump_file(file, "app.log", AsyncPath(data.log_path)))
-            dump_model(file, "settings.json", data.settings)
-            dump_model(file, "browser.json", data.browser)
-            dump_model(file, "client_info.json", data.client_info)
-            dump_model(file, "connections.json", data.connections)
-            dump_model(file, "state.json", data.state_dump)
-            dump_model(file, "server_info.json", data.server_info)
+        dump_file(file, "config.py", Path(data.settings.config_path))
+        dump_file(file, "app.log", Path(data.log_path))
+        dump_model(file, "settings.json", data.settings)
+        dump_model(file, "browser.json", data.browser)
+        dump_model(file, "client_info.json", data.client_info)
+        dump_model(file, "connections.json", data.connections)
+        dump_model(file, "state.json", data.state_dump)
+        dump_model(file, "server_info.json", data.server_info)
 
     buffer.seek(0)
     return buffer
@@ -73,17 +72,17 @@ def get_state_dump() -> StateDump:
     )
 
 
-async def create_debug_bundle(scope, client_info: ClientDebugInfo) -> BytesIO:
+@sync_to_async
+def create_debug_bundle(scope, client_info: ClientDebugInfo) -> BytesIO:
     headers = dict(scope['headers'])
-    headers.get(b'user-agent', b"").decode('utf-8')
-    return await generate_bundle_file(
-        DebugBundleData(
-            settings=Settings,
-            log_path=Settings['LOG_FILE_PATH'],
-            browser=UserAgentInfo.parse(headers.get(b'user-agent', b"").decode('utf-8')),
-            client_info=client_info,
-            connections=list(events_manager.get_clients()),
-            state_dump=get_state_dump(),
-            server_info=ServerInfo.create(scope, state),
-        )
+    user_agent = headers.get(b'user-agent', b"").decode('utf-8')
+    bundle_data = DebugBundleData(
+        settings=Settings,
+        log_path=Settings['LOG_FILE_PATH'],
+        browser=UserAgentInfo.parse(user_agent),
+        client_info=client_info,
+        connections=list(events_manager.get_clients()),
+        state_dump=get_state_dump(),
+        server_info=ServerInfo.create(scope, state),
     )
+    return generate_bundle_file(bundle_data)

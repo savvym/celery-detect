@@ -1,6 +1,6 @@
-import asyncio
 import json
 import logging
+from asgiref.sync import sync_to_async
 
 from events.exceptions import InconsistentStateStoreError, InvalidEventError
 from events.models import EventCategory, EventMessage, EventType
@@ -15,21 +15,19 @@ logger = logging.getLogger(__name__)
 
 class EventBroadcaster(QueueSubscriber[dict]):
     async def handle_event(self, event: dict) -> None:
-        await asyncio.gather(
-            broadcast_raw_event(event),
-            broadcast_parsed_event(event),
-        )
+        await sync_to_async(broadcast_raw_event)(event)
+        await sync_to_async(broadcast_parsed_event)(event)
 
 
-async def broadcast_raw_event(event: dict) -> None:
+def broadcast_raw_event(event: dict) -> None:
     logger.debug(f"Broadcasting raw event of type {event.get('type', 'UNKNOWN')!r}")
     try:
-        await raw_events_manager.broadcast(json.dumps(event))
+        sync_to_async(raw_events_manager.broadcast)(json.dumps(event))
     except Exception as e:
         logger.exception(f"Failed to broadcast raw event: {e}")
 
 
-async def broadcast_parsed_event(event: dict) -> None:
+def broadcast_parsed_event(event: dict) -> None:
     try:
         message = parse_event(event)
     except InvalidEventError as e:
@@ -41,7 +39,7 @@ async def broadcast_parsed_event(event: dict) -> None:
     else:
         logger.debug(f"Broadcasting event {message.type.value!r}")
         try:
-            await events_manager.broadcast(message.model_dump_json())
+            sync_to_async(events_manager.broadcast)(message.model_dump_json())
         except Exception as e:
             logger.exception(f"Failed to broadcast event: {e}")
 
