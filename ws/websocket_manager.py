@@ -23,7 +23,7 @@ class WebsocketManager:
 
     async def broadcast(self, message: str) -> None:
         """Broadcasts a message to all active connections."""
-        logger.info(f"Broadcasting message to {self.name} websocket manager")
+        logger.debug(f"Broadcasting message to {self.name} websocket manager")
         for connection in self.active_connections:
             await connection.send(text_data=message)
 
