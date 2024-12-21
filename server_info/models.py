@@ -1,7 +1,7 @@
 import logging
 import os
 import platform
-# import resource
+import resource
 import time
 from typing import Self
 
@@ -32,11 +32,11 @@ class ServerInfo(BaseModel):
 
     @classmethod
     def create(cls, scope, state: State) -> Self:
-        # rusage = resource.getrusage(resource.RUSAGE_SELF)
+        rusage = resource.getrusage(resource.RUSAGE_SELF)
         client = scope.get('client', ('', 0))
         return ServerInfo(
             cpu_usage=os.getloadavg(),
-            # memory_usage=rusage.ru_maxrss,
+            memory_usage=rusage.ru_maxrss,
             uptime=time.time() - start_time,
             server_hostname=client[0],
             server_port=client[1],

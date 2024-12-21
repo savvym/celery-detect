@@ -2,6 +2,8 @@ import asyncio
 import json
 import logging
 
+from twisted.python.log import logerr
+
 from events.exceptions import InconsistentStateStoreError, InvalidEventError
 from events.models import EventCategory, EventMessage, EventType
 from events.receiver import state

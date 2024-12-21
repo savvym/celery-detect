@@ -30,4 +30,4 @@ application = ProtocolTypeRouter(
     }
 )
 
-startup_handler()
+# startup_handler()

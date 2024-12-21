@@ -12,7 +12,7 @@ class WebsocketManager:
     def __init__(self, name: str):
         self.name = name
         self.channel_layer = get_channel_layer()
-        self.active_connections = {}  # 使用字典存储，key 为 channel_name，value 为 ClientInfo 实例
+        self.active_connections = []
         self.lock = asyncio.Lock()
 
     async def subscribe(self, websocket: AsyncWebsocketConsumer) -> None:
