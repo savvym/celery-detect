@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-yq^3eoi4faas@y+nkd294iz^^itdaj!o5^h1z_^$ey997u1om&'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ['*']
 
@@ -168,17 +168,22 @@ LOGGING = {
         'django': {
             'handlers': ['console'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
         },
         'ws': {
             'handlers': ['console'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
         },
         'events': {
             'handlers': ['console'],
             'level': 'DEBUG',
-            'propagate': True,
+            'propagate': False,
+        },
+        'tasks': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
         },
     }
 }
