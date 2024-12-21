@@ -13,33 +13,24 @@ class WebsocketManager:
         self.name = name
         self.channel_layer = get_channel_layer()
         self.active_connections = []
-        self.lock = asyncio.Lock()
 
-    async def subscribe(self, websocket: AsyncWebsocketConsumer) -> None:
-        async with self.lock:
-            logger.info(f"Client {websocket.scope['client']} subscribed to {self.name} websocket manager")
-            client_info = await ClientInfo.from_scope(websocket.scope)
-            self.active_connections[websocket.channel_name] = client_info
-            await self.channel_layer.group_add(self.name, websocket.channel_name)
+    def subscribe(self, websocket: AsyncWebsocketConsumer) -> None:
+        logger.info(f"Client {websocket.scope['client']} subscribed to {self.name} websocket manager")
+        self.active_connections.append(websocket)
 
-    async def unsubscribe(self, websocket: AsyncWebsocketConsumer) -> None:
-        async with self.lock:
-            logger.info(f"Client {websocket.scope['client']} unsubscribed from {self.name} websocket manager")
-            if websocket.channel_name in self.active_connections:
-                del self.active_connections[websocket.channel_name]
-            await self.channel_layer.group_discard(self.name, websocket.channel_name)
+    def unsubscribe(self, websocket: AsyncWebsocketConsumer) -> None:
+        logger.info(f"Client {websocket.scope['client']} unsubscribed from {self.name} websocket manager")
+        self.active_connections.remove(websocket)
 
     async def broadcast(self, message: str) -> None:
-        await self.channel_layer.group_send(
-            self.name,
-            {
-                'type': 'broadcast.message',
-                'message': message,
-            }
-        )
+        """Broadcasts a message to all active connections."""
+        logger.info(f"Broadcasting message to {self.name} websocket manager")
+        for connection in self.active_connections:
+            await connection.send(text_data=message)
 
-    async def get_clients(self) -> list[ClientInfo]:
-        return list(self.active_connections.values())
+    def get_clients(self) -> list[ClientInfo]:
+        """Returns a list of clients currently connected."""
+        return [client.client_info for client in self.active_connections]
 
 
 class WebSocketConsumer(AsyncWebsocketConsumer):

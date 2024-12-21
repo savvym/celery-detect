@@ -11,11 +11,11 @@ class BaseWebSocketConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
         await self.accept()
-        await self.manager.subscribe(self)
+        self.manager.subscribe(self)
         logger.info(f"Client {self.scope['client']} connected to {self.manager.name}")
 
-    async def disconnect(self, close_code):
-        await self.manager.unsubscribe(self)
+    def disconnect(self, close_code):
+        self.manager.unsubscribe(self)
         logger.info(f"Client {self.scope['client']} disconnected from {self.manager.name}")
 
     async def receive(self, text_data=None, bytes_data=None):
