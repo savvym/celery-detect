@@ -1,6 +1,8 @@
 import logging
 import os
 import asyncio
+import types
+
 from django.apps import AppConfig
 from django.conf import settings
 
@@ -14,6 +16,11 @@ logger = logging.getLogger(__name__)
 
 class EventsConfig(AppConfig):
     name = 'events'
+
+    def __init__(self, app_name: str, app_module: types.ModuleType | None):
+        super().__init__(app_name, app_module)
+        self._listener = None
+        self._event_consumer = None
 
     def ready(self):
         logger.info("Welcome to Celery Insights!")
