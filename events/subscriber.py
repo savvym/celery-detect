@@ -25,7 +25,7 @@ class QueueSubscriber(Generic[T], ABC):
             except CancelledError:
                 break
             else:
-                logger.info(f"Received event from {self.name!r}: {event}")
+                logger.debug(f"Received event from {self.name!r}: {event}")
                 try:
                     await self.handle_event(event)
                 except Exception as e:
