@@ -30,7 +30,7 @@ async def start_event_system():
     try:
         # Let the system run indefinitely until stopped
         while True:
-            await asyncio.sleep(3600)  # Sleep for 1 hour (or adjust as needed)
+            await asyncio.sleep(0.1)  # Sleep for 1 hour (or adjust as needed)
     except (KeyboardInterrupt, SystemExit, CancelledError):
         logger.info("Stopping server...")
     finally:
