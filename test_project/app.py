@@ -6,7 +6,7 @@ from celery import Celery
 app = Celery(
     "tests",
     broker='redis://localhost:6379/0',
-    backend='redis://localhost:6370/1'
+    backend='redis://localhost:6379/1'
 )
 app.conf.broker_connection_retry_on_startup = True
 app.conf.worker_send_task_events = True

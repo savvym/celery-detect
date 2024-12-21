@@ -24,7 +24,7 @@ async def get_server_info(request):
 @csrf_exempt
 async def get_clients(request):
     clients = list(events_manager.get_clients())
-    clients_data = [client.to_dict() for client in clients]  # Assuming `to_dict` method exists
+    clients_data = [client.model_dump() for client in clients]  # Assuming `to_dict` method exists
     return JsonResponse(clients_data, safe=False)
 
 

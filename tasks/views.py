@@ -1,7 +1,6 @@
 # views.py
 from django.http import JsonResponse, Http404
 from django.core.paginator import Paginator
-from django.views.decorators.cache import cache_page
 from celery.result import AsyncResult
 from celery_detect.celery_app import get_celery_app
 from events.receiver import state
@@ -30,13 +29,12 @@ async def get_task_detail(request, task_id):
     if task is None:
         raise Http404("Task not found.")
 
-    task_data = Task.from_celery_task(task).to_dict()
+    task_data = Task.from_celery_task(task).model_dump()
     return JsonResponse(task_data)
 
 
-@cache_page(5)
 async def get_task_result(request, task_id):
-    celery_app = await get_celery_app()
+    celery_app = get_celery_app()
     result = AsyncResult(task_id, app=celery_app)
 
     task_result = TaskResult(

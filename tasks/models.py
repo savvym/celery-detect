@@ -1,5 +1,3 @@
-from django.db import models
-
 # Create your models here.
 from enum import Enum
 from typing import Any, Self

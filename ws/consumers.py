@@ -14,7 +14,7 @@ class BaseWebSocketConsumer(AsyncWebsocketConsumer):
         self.manager.subscribe(self)
         logger.info(f"Client {self.scope['client']} connected to {self.manager.name}")
 
-    def disconnect(self, close_code):
+    async def disconnect(self, close_code):
         self.manager.unsubscribe(self)
         logger.info(f"Client {self.scope['client']} disconnected from {self.manager.name}")
 

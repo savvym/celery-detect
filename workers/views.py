@@ -17,7 +17,7 @@ async def get_workers(request):
         if alive is None or worker.alive == alive
     ]
 
-    return JsonResponse([worker.to_dict() for worker in workers], safe=False)
+    return JsonResponse([worker.model_dump() for worker in workers], safe=False)
 
 
 @cache_page(5)
