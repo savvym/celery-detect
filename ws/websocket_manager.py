@@ -11,7 +11,6 @@ logger = logging.getLogger(__name__)
 class WebsocketManager:
     def __init__(self, name: str):
         self.name = name
-        self.channel_layer = get_channel_layer()
         self.active_connections = []
 
     def subscribe(self, websocket: AsyncWebsocketConsumer) -> None:
@@ -39,11 +38,11 @@ class WebSocketConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
         self.client_info = await ClientInfo.from_scope(self.scope)
-        await self.manager.subscribe(self)
+        self.manager.subscribe(self)
         await self.accept()
 
     async def disconnect(self, close_code):
-        await self.manager.unsubscribe(self)
+        self.manager.unsubscribe(self)
 
     async def receive(self, text_data=None, bytes_data=None):
         message = text_data if text_data else bytes_data
