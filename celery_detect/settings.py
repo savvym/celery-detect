@@ -32,6 +32,7 @@ ALLOWED_HOSTS = ['*']
 INSTALLED_APPS = [
     'daphne',
     'ws',
+    'celery_backend',
     'events',
     'server_info',
     'tasks',
@@ -46,8 +47,8 @@ INSTALLED_APPS = [
 ]
 
 # Celery Config
-CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
-CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/1'
+CELERY_BROKER_URL = 'amqp://guest:guest@9.134.60.24:5672//'
+CELERY_RESULT_BACKEND = 'celery_backend.backends.DatabaseBackend'
 CELERY_RESULT_EXTENDED = True
 CELERY_TASK_TRACK_STARTED = True
 CELERY_WORKER_SEND_TASK_EVENTS = True  # Enables task events
