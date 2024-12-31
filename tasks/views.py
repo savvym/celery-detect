@@ -1,4 +1,5 @@
 # views.py
+from asgiref.sync import sync_to_async
 from django.http import JsonResponse, Http404
 from django.core.paginator import Paginator
 from celery.result import AsyncResult
@@ -32,11 +33,15 @@ async def get_task_detail(request, task_id):
     task_data = Task.from_celery_task(task).model_dump()
     return JsonResponse(task_data)
 
-
-async def get_task_result(request, task_id):
+def get_task_result(task_id):
     celery_app = get_celery_app()
     result = AsyncResult(task_id, app=celery_app)
+    return result
 
+get_task_result_async = sync_to_async(get_task_result)
+    
+async def get_task_result(request, task_id):
+    result = await get_task_result_async(task_id)
     task_result = TaskResult(
         id=result.id,
         type=result.name,
