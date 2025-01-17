@@ -1,4 +1,6 @@
 # views.py
+import json
+import ast
 from django.http import JsonResponse, Http404
 from django.core.paginator import Paginator
 from celery.result import AsyncResult
@@ -45,7 +47,7 @@ def get_task_result(request, task_id):
         result=result.result,
         traceback=str(result.traceback) if result.traceback is not None else None,
         ignored=result.ignored,
-        args=result.args or [],
+        args=list(ast.literal_eval(result.args)) or [],
         kwargs=result.kwargs or {},
         retries=result.retries or 0,
         worker=result.worker,

@@ -97,7 +97,7 @@ class TaskResult(BaseModel):
     traceback: str | None = Field(None, description="Task exception traceback")
     ignored: bool = Field(description="Task result is ignored")
     args: list[Any] = Field(description="Task positional arguments")
-    kwargs: dict[str, Any] = Field(description="Task keyword arguments")
+    kwargs: str = Field(description="Task keyword arguments")
     retries: int = Field(description="Task retries count")
     worker: str | None = Field(None, description="Executing worker id")
 
